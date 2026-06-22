@@ -1,0 +1,32 @@
+# example-com-http:
+#   kind: web
+#   url: http://example.com
+
+# example-com-https:
+#   kind: web
+#   url: https://example.com
+#   expect_match: .*Example Domain.*
+#   interval: 20
+
+# invalid-http:
+#   kind: web
+#   url: http://www.www.invalid
+#   interval: 10
+
+mysql-db01-slave:
+  kind: custom
+  custom-check-cmd: cmd /c "ssh boxer@192.168.1.65 docker exec db01-slave mysql -e 'show slave status\G' | findstr Slave_IO_State"
+  expect-match: '.*Slave_IO_State: Waiting for source to send event.*'
+  recovery-cmd: cmd /c "ssh boxer@192.168.1.65 docker exec db01-slave mysql -e 'reset slave; start slave;'"
+
+_common:
+  report-to: ${REPORT-TO-EMAIL}
+  report-from: ${REPORT-FROM-EMAIL}
+  smtp-host: ${SMTP-HOST}
+  smtp-port: ${SMTP-PORT}
+  smtp-user: ${SMTP-USER}
+  smtp-pass: ${SMTP-PASS}
+  smtp-starttls: true
+  smtp-no-verify-hostname: true
+  smtp-no-check-certificate: true
+  min-log-level: info
