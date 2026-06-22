@@ -1,0 +1,5 @@
+mysql-db01-slave:
+  kind: custom
+  custom-check-cmd: cmd /c "ssh boxer@192.168.1.65 docker exec db01-slave mysql -e 'show slave status\G' | findstr Slave_IO_State"
+  expect-match: '.*Slave_IO_State: Waiting for source to send event.*'
+  recovery-cmd: cmd /c "ssh boxer@192.168.1.65 docker exec db01-slave mysql -e 'reset slave; start slave;'"

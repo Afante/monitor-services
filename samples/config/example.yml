@@ -1,0 +1,67 @@
+# In all .yml configuration files text interpolation is supported.
+# It looks like ${VARNAME}, where VARNAME is the name of an environment variable.
+
+# Names a target to be monitored, called "example-com-http".
+# All targets should have distinct names.
+# A later loaded target with the same name will overwrite a previous one.
+# When overwritting happens, the old target will be completely lost.  No merge will happen.
+example-com-http:
+
+  # Define this target as a web target.
+  kind: web
+
+  # The URL to be monitored.  It will be accessed using the GET method.
+  url: http://example.com
+
+# Names a target to be monitored, called "example-com-https".
+example-com-https:
+
+  # Define this target as a web target.
+  kind: web
+
+  # The URL to be monitored.  It will be accessed using the GET method.
+  url: https://example.com
+
+  # The response body must match this regular expression.
+  expect_match: .*Example Domain.*
+
+  # The response body must NOT match this regular expression.
+  expect_unmatch: .*Bad Gateway.*
+
+  # Number of seconds to wait between consecutive checks.
+  interval: 20
+
+# Begin common settings.
+_common:
+
+  # When set, specifies where the error email should be sent to.
+  report-to: ${REPORT-TO-EMAIL}
+
+  # When set, specifies where the error email should be sent to.
+  report-from: ${REPORT-FROM-EMAIL}
+
+  # The SMTP host to send emails to.
+  smtp-host: ${SMTP-HOST}
+
+  # The SMTP port to send emails to.
+  smtp-port: ${SMTP-PORT}
+
+  # The user name to log into the SMTP server.
+  smtp-user: ${SMTP-USER}
+
+  # The password for logging into the SMTP server.
+  smtp-pass: ${SMTP-PASS}
+
+  # When set to true, STARTTLS is used to make a secure connection.
+  smtp-starttls: true
+
+  # When set to true, host name is not verified.
+  smtp-no-verify-hostname: true
+
+  # When set to true, SSL certificate is not checked.
+  smtp-no-check-certificate: true
+
+  # The minimum log level
+  # All logs below this level will not be outputted.
+  # The log levels from low to high are: trace, debug, info, warning, error.
+  min-log-level: info
