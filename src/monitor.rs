@@ -58,16 +58,16 @@ impl MonitorAction {
         }
     }
 
-    async fn check_match<'a, F: AsyncFn() -> Result<&'a str, Error>>(&self, target: &MonitorTarget, text_func: F) -> Result<Option<String>, String> {
+    async fn check_match<'a, F: AsyncFnOnce() -> Result<String, Error>>(&self, target: &MonitorTarget, text_func: F) -> Result<Option<String>, String> {
         let text_result = text_func().await;
         if let Some(regex) = target.expect_match.as_ref() {
             let regex = match Regex::new(regex.as_str()) {
                 Ok(r) => r,
                 Err(err) => return Err(err.to_string())
             };
-            match text_result {
+            match &text_result {
                 Ok(text) => {
-                    if !regex.is_match(text) {
+                    if !regex.is_match(text.as_str()) {
                         return Err(format!("Content did not match against regex: {}", target.expect_match.as_ref().unwrap()))
                     }
                 },
@@ -81,9 +81,9 @@ impl MonitorAction {
                 Ok(r) => r,
                 Err(err) => return Err(err.to_string())
             };
-            match text_result {
+            match &text_result {
                 Ok(text) => {
-                    if regex.is_match(text) {
+                    if regex.is_match(text.as_str()) {
                         return Err(format!("Content unexpectedly matched against regex: {}", target.expect_match.as_ref().unwrap()))
                     }
                 },
@@ -138,17 +138,20 @@ impl MonitorAction {
                 if status_code != target.expect_status_code.unwrap_or(200) {
                     return Err(format!("Got status code [{}] != expected status code [{}].", status_code, target.expect_status_code.unwrap()))
                 }
-                match response.text().await {
-                    Ok(body) => {
-                        log_line_f(LogLevel::Debug, monitor_name, || format!("Got body: {}", body.as_str()));
-                        match self.check_match(target, async || {Ok(body.as_str())}).await {
-                            Ok(_) => Ok(Some("Web check succeeded.".to_string())),
-                            Err(err) => return Err(err)
+                match self.check_match(target,  async || {
+                    match response.text().await {
+                        Ok(body) => {
+                            log_line_f(LogLevel::Debug, monitor_name, || format!("Got body: {}", body));
+                            Ok(body.clone())
+                        },
+                        Err(err) => {
+                            Err(Error::new(format!("Failed to get body bytes: {}", err.to_string())))
                         }
-                    },
-                    Err(err) => return Err(format!("Failed to get body bytes: {}", err.to_string()))
+                    }
+                }).await {
+                    Ok(_) => Ok(Some("Web check succeeded.".to_string())),
+                    Err(err) => return Err(err)
                 }
-                // 
             },
             Err(err) => Err(err.to_string())
         }
@@ -166,7 +169,7 @@ impl MonitorAction {
             }
             let output = call_result.unwrap().unwrap();
             log_line_f(LogLevel::Debug, monitor_name, || format!("Stdout + Stderr:\n{}", output.as_str()));
-            match self.check_match(target, async || Ok(output.as_str())).await {
+            match self.check_match(target, async || Ok(output)).await {
                 Ok(opt) => {
                     let result = match opt {
                         Some(msg) => Ok(Some(msg)),

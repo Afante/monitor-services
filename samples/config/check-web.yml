@@ -1,17 +1,20 @@
 # In all .yml configuration files text interpolation is supported.
 # It looks like ${VARNAME}, where VARNAME is the name of an environment variable.
 
-# Names a target to be monitored, called "example-com-http".
+# Names a target to be monitored, called "non-existent-web".
 # All targets should have distinct names.
 # A later loaded target with the same name will overwrite a previous one.
 # When overwritting happens, the old target will be completely lost.  No merge will happen.
-example-com-http:
+non-existent-web:
 
   # Define this target as a web target.
   kind: web
 
   # The URL to be monitored.  It will be accessed using the GET method.
-  url: http://example.com
+  url: http://example.com/aaabbcc--non-exists.html
+
+  # The expected status code, defaults to 200.
+  expect_status_code: 404
 
 # Names a target to be monitored, called "example-com-https".
 example-com-https:
