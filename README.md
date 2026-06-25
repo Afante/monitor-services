@@ -2,7 +2,7 @@
 
 This is a simple tool written in Rust, that helps monitor services and do simple recoveries.
 
-It has built-in support for monitoring HTTP GET.  But you can always easily extend MoniServ's ability by providing scripts as custom commands.
+It has built-in support for monitoring HTTP requests.  But you can always easily extend MoniServ's ability by providing scripts as custom commands.
 
 In addition to logs, failures can be reported by emails.
 
