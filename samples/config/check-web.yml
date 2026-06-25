@@ -11,6 +11,7 @@ non-existent-web:
   kind: web
 
   # HTTP method.  It's GET if not given.
+  # GET / POST / PUT / DELETE / HEAD / OPTIONS / CONNECT / PATCH / TRACE
   method: POST
 
   # Body of the request.
