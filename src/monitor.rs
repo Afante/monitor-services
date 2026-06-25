@@ -10,6 +10,7 @@ use std::process::Command;
 use core::convert::From;
 use std::string::ToString;
 use std::convert::AsRef;
+use std::str::FromStr;
 
 use crate::prog_settings::*;
 use crate::log::*;
@@ -131,7 +132,21 @@ impl MonitorAction {
 
     async fn do_web(&self, monitor_name: &str, target: &MonitorTarget) -> Result<Option<String>, String> {
         log_line_f(LogLevel::Debug, monitor_name, || format!("Send HTTP GET to {}", target.url));
-        match reqwest::get(target.url.as_str()).await {
+        let method = match reqwest::Method::from_str(target.method.as_str()) {
+            Ok(m) => m,
+            Err(err) => return Err(err.to_string())
+        };
+        let client = reqwest::Client::new();
+        let mut req_builder = client.request(method, target.url.as_str());
+        if let Some(body) = &target.body {
+            req_builder = req_builder.body(body.clone());
+        }
+        let request = match req_builder.build() {
+            Ok(r) => r,
+            Err(err) => return Err(err.to_string())
+        };
+        let res_result = client.execute(request).await;
+        match res_result {
             Ok(response) => {
                 let status_code = response.status().as_u16();
                 log_line_f(LogLevel::Debug, monitor_name, || format!("Got status code {}", status_code));

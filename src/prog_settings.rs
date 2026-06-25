@@ -108,6 +108,12 @@ pub struct MonitorTarget {
     #[serde(default = "String::new")]
     #[garde(custom(validate_url_or_empty))]
     pub url: String,
+    #[serde(default = "defaults::method")]
+    #[garde(skip)]
+    pub method: String,
+    #[serde(default = "defaults::none")]
+    #[garde(skip)]
+    pub body: Option<String>,
     #[garde(skip)]
     pub check_interval_secs: Option<i32>,
     #[garde(skip)]
@@ -171,6 +177,8 @@ mod defaults {
 
     pub fn check_interval_secs() -> i32 { 30 }
     pub fn min_log_level() -> LogLevel {LogLevel::Info}
+    pub fn method() -> String {"GET".to_owned()}
+    pub fn none<T>() -> Option<T> {None}
 }
 
 #[derive(Debug, Deserialize)]

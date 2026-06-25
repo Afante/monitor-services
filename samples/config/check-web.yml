@@ -10,6 +10,13 @@ non-existent-web:
   # Define this target as a web target.
   kind: web
 
+  # HTTP method.  It's GET if not given.
+  method: POST
+
+  # Body of the request.
+  # If not applicable, do not specify it.
+  body: a=b&c=d
+
   # The URL to be monitored.  It will be accessed using the GET method.
   url: http://example.com/aaabbcc--non-exists.html
 
