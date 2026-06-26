@@ -8,6 +8,13 @@ In addition to logs, failures can be reported by emails.
 
 ## How to Build
 
+This version is built by Rust 1.96.0.
+
+If you haven't had Rust installed, consult the following page:
+https://rust-lang.org/tools/install/
+
+You may need to install additional packages.  Follow your system's installer's guides.
+
 Just enter the directory and run:
 
 `cargo build --release`
