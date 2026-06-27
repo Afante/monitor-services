@@ -12,6 +12,7 @@ use std::string::ToString;
 use std::convert::AsRef;
 use std::str::FromStr;
 use core::time::Duration;
+use tokio::task::spawn_blocking;
 
 use crate::prog_settings::*;
 use crate::log::*;
@@ -157,11 +158,15 @@ impl MonitorAction {
         log_line_f(LogLevel::Debug, monitor_name, || format!("Built the request"));
         let timeout_result = tokio::time::timeout(
             Duration::from_secs(target.timeout.unwrap_or(common_settings.timeout)),
-            client.execute(request)
+            spawn_blocking(move || client.execute(request))
         ).await;
-        let res_result = match timeout_result {
+        let join_result = match timeout_result {
             Ok(rr) => rr,
             Err(err) => return Err(format!("Timed out: {}", err.to_string()))
+        };
+        let res_result = match join_result {
+            Ok(r) => r.await,
+            Err(e) => return Err(format!("Join failed: {}", e.to_string()))
         };
         log_line_f(LogLevel::Debug, monitor_name, || format!("Sent the request"));
         match res_result {
