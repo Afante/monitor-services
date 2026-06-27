@@ -1,7 +1,24 @@
-example-com-http:
+reserv-uniwits-https:
+
+  # Define this target as a web target.
   kind: web
-  url: http://example.com/non-exists-aa-bb-cc.html
-  expect-status-code: 404
+
+  # The URL to be monitored.  It will be accessed using the GET method.
+  url: https://reserv.uniwits.com
+
+  # The response body must match this regular expression.
+  expect_match: Reservation Management System for Free
+
+  # The response body must NOT match this regular expression.
+  expect_unmatch: Bad Gateway
+
+  # Number of seconds to wait between consecutive checks.
+  interval: 30
+
+# example-com-http:
+#   kind: web
+#   url: http://example.com/non-exists-aa-bb-cc.html
+#   expect-status-code: 404
 
 # example-com-https:
 #   kind: web
@@ -14,11 +31,11 @@ example-com-http:
 #   url: http://www.www.invalid
 #   interval: 10
 
-# mysql-db01-slave:
-#   kind: custom
-#   custom-check-cmd: cmd /c "ssh ${SSH-DOCKERHOST} docker exec ${DBCONTAINER} mysql -e 'show slave status\G' | findstr Slave_IO_State"
-#   expect-match: '.*Slave_IO_State: Waiting for source to send event.*'
-#   recovery-cmd: cmd /c "ssh ${SSH-DOCKERHOST} docker exec ${DBCONTAINER} mysql -e 'reset slave; start slave;'"
+mysql-db01-slave:
+  kind: custom
+  custom-check-cmd: cmd /c "ssh ${SSH-DOCKERHOST} docker exec ${DBCONTAINER} mysql -e 'show slave status\G' | findstr Slave_IO_State"
+  expect-match: '.*Slave_IO_State: Waiting for source to send event.*'
+  recovery-cmd: cmd /c "ssh ${SSH-DOCKERHOST} docker exec ${DBCONTAINER} mysql -e 'reset slave; start slave;'"
 
 _common:
   report-to: ${REPORT-TO-EMAIL}
@@ -30,4 +47,4 @@ _common:
   smtp-starttls: true
   smtp-no-verify-hostname: true
   smtp-no-check-certificate: true
-  min-log-level: info
+  min-log-level: debug

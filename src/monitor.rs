@@ -145,7 +145,9 @@ impl MonitorAction {
             Ok(r) => r,
             Err(err) => return Err(err.to_string())
         };
+        log_line_f(LogLevel::Debug, monitor_name, || format!("Built the request"));
         let res_result = client.execute(request).await;
+        log_line_f(LogLevel::Debug, monitor_name, || format!("Sent the request"));
         match res_result {
             Ok(response) => {
                 let status_code = response.status().as_u16();
@@ -156,7 +158,7 @@ impl MonitorAction {
                 match self.check_match(target,  async || {
                     match response.text().await {
                         Ok(body) => {
-                            log_line_f(LogLevel::Debug, monitor_name, || format!("Got body: {}", body));
+                            log_line_f(LogLevel::Trace, monitor_name, || format!("Got body: {}", body));
                             Ok(body.clone())
                         },
                         Err(err) => {
@@ -183,7 +185,7 @@ impl MonitorAction {
                 return call_result;
             }
             let output = call_result.unwrap().unwrap();
-            log_line_f(LogLevel::Debug, monitor_name, || format!("Stdout + Stderr:\n{}", output.as_str()));
+            log_line_f(LogLevel::Trace, monitor_name, || format!("Stdout + Stderr:\n{}", output.as_str()));
             match self.check_match(target, async || Ok(output)).await {
                 Ok(opt) => {
                     let result = match opt {
@@ -304,6 +306,9 @@ pub async fn run_monitoring(prog_settings: &ProgramSettings) {
         let now = Local::now();
         {
             let mut runtime = runtime_cell.borrow_mut();
+            log_line_f(LogLevel::Trace, runtime.monitor_name.as_str(), || {
+                format!("Entering call_monitor.")
+            });
             let total_delay = (now.timestamp_millis() - runtime.last_ran.timestamp_millis()) as f64 / 1000.0;
             let target = &runtime.target;
             let run_interval = target.check_interval_secs.unwrap_or(prog_settings.common_settings.check_interval_secs) as f64;
@@ -311,11 +316,20 @@ pub async fn run_monitoring(prog_settings: &ProgramSettings) {
                 // Its time to run again.
                 runtime.action = MonitorAction::from_target(target).unwrap();
                 runtime.last_ran = Local::now();
+                log_line_f(LogLevel::Trace, runtime.monitor_name.as_str(), || {
+                    format!("Entering run(...) of the action.")
+                });
             }
             else {
                 runtime.action = MonitorAction::Sleep((run_interval - total_delay) as i64);
+                log_line_f(LogLevel::Trace, runtime.monitor_name.as_str(), || {
+                    format!("Entering waiting of the action.")
+                });
             }
             let result = runtime.action.run(runtime.monitor_name.as_str(), &runtime.target).await;
+            log_line_f(LogLevel::Trace, runtime.monitor_name.as_str(), || {
+                format!("Left run(...) of the action.")
+            });
             match result {
                 Ok(opt) => {
                     if let Some(msg) = opt {
@@ -367,7 +381,10 @@ pub async fn run_monitoring(prog_settings: &ProgramSettings) {
                     }
                 }
             }
-        };
+            log_line_f(LogLevel::Trace, runtime.monitor_name.as_str(), || {
+                format!("Leaving call_monitor.")
+            });
+        }
         runtime_cell
     };
 
