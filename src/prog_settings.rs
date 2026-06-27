@@ -128,6 +128,15 @@ pub struct MonitorTarget {
     #[serde(default = "String::new")]
     #[garde(skip)]
     pub recovery_cmd: String,
+    #[serde(default = "defaults::none")]
+    #[garde(skip)]
+    pub connect_timeout: Option<u64>,
+    #[serde(default = "defaults::none")]
+    #[garde(skip)]
+    pub timeout: Option<u64>,
+    #[serde(default = "defaults::none")]
+    #[garde(skip)]
+    pub read_timeout: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, Validate)]
@@ -169,7 +178,19 @@ pub struct CommonSettings {
 
     #[serde(default = "defaults::min_log_level")]
     #[garde(skip)]
-    pub min_log_level: LogLevel
+    pub min_log_level: LogLevel,
+
+    #[serde(default = "defaults::connect_timeout")]
+    #[garde(skip)]
+    pub connect_timeout: u64,
+
+    #[serde(default = "defaults::read_timeout")]
+    #[garde(skip)]
+    pub read_timeout: u64,
+
+    #[serde(default = "defaults::timeout")]
+    #[garde(skip)]
+    pub timeout: u64,
 }
 
 mod defaults {
@@ -179,6 +200,9 @@ mod defaults {
     pub fn min_log_level() -> LogLevel {LogLevel::Info}
     pub fn method() -> String {"GET".to_owned()}
     pub fn none<T>() -> Option<T> {None}
+    pub fn connect_timeout() -> u64 {30}
+    pub fn timeout() -> u64 {30}
+    pub fn read_timeout() -> u64 {30}
 }
 
 #[derive(Debug, Deserialize)]

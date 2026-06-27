@@ -11,6 +11,7 @@ use core::convert::From;
 use std::string::ToString;
 use std::convert::AsRef;
 use std::str::FromStr;
+use core::time::Duration;
 
 use crate::prog_settings::*;
 use crate::log::*;
@@ -51,11 +52,11 @@ impl MonitorAction {
         }
     }
 
-    async fn run(&self, monitor_name: &str, target: &MonitorTarget) -> Result<Option<String>, String> {
+    async fn run(&self, monitor_name: &str, target: &MonitorTarget, common_settings: &CommonSettings) -> Result<Option<String>, String> {
         match *self {
-            MonitorAction::Web => self.do_web(monitor_name, target).await,
-            MonitorAction::CustomCommand => self.do_custom_command(monitor_name, target).await,
-            MonitorAction::Sleep(milliseconds) => self.do_sleep(monitor_name, milliseconds).await
+            MonitorAction::Web => self.do_web(monitor_name, target, common_settings).await,
+            MonitorAction::CustomCommand => self.do_custom_command(monitor_name, target, common_settings).await,
+            MonitorAction::Sleep(milliseconds) => self.do_sleep(monitor_name, milliseconds, common_settings).await
         }
     }
 
@@ -125,18 +126,25 @@ impl MonitorAction {
         }
     }
 
-    async fn do_sleep(&self, _monitor_name: &str, wait_ms: i64) -> Result<Option<String>, String> {
+    async fn do_sleep(&self, _monitor_name: &str, wait_ms: i64, _common_settings: &CommonSettings) -> Result<Option<String>, String> {
         std::thread::sleep(std::time::Duration::from_millis(wait_ms as u64));
         Ok(None)
     }
 
-    async fn do_web(&self, monitor_name: &str, target: &MonitorTarget) -> Result<Option<String>, String> {
+    async fn do_web(&self, monitor_name: &str, target: &MonitorTarget, common_settings: &CommonSettings) -> Result<Option<String>, String> {
         log_line_f(LogLevel::Debug, monitor_name, || format!("Send HTTP GET to {}", target.url));
         let method = match reqwest::Method::from_str(target.method.as_str()) {
             Ok(m) => m,
             Err(err) => return Err(err.to_string())
         };
-        let client = reqwest::Client::new();
+        let client = match reqwest::ClientBuilder::new()
+            .connect_timeout(Duration::from_secs(target.connect_timeout.unwrap_or(common_settings.connect_timeout)))
+            .timeout(Duration::from_secs(target.timeout.unwrap_or(common_settings.timeout)))
+            .read_timeout(Duration::from_secs(target.read_timeout.unwrap_or(common_settings.read_timeout)))
+            .build() {
+                Ok(c) => c,
+                Err(err) => return Err(err.to_string())
+            };
         let mut req_builder = client.request(method, target.url.as_str());
         if let Some(body) = &target.body {
             req_builder = req_builder.body(body.clone());
@@ -174,7 +182,7 @@ impl MonitorAction {
         }
     }
 
-    async fn do_custom_command(&self, monitor_name: &str, target: &MonitorTarget) -> Result<Option<String>, String> {
+    async fn do_custom_command(&self, monitor_name: &str, target: &MonitorTarget, _common_settings: &CommonSettings) -> Result<Option<String>, String> {
         if target.custom_check_cmd.len() <= 0 {
             Err("The custom_check_cmd is not defined for the target.".to_owned())
         }
@@ -326,7 +334,11 @@ pub async fn run_monitoring(prog_settings: &ProgramSettings) {
                     format!("Entering waiting of the action.")
                 });
             }
-            let result = runtime.action.run(runtime.monitor_name.as_str(), &runtime.target).await;
+            let result = runtime.action.run(
+                runtime.monitor_name.as_str(), 
+                &runtime.target,
+                &prog_settings.common_settings
+            ).await;
             log_line_f(LogLevel::Trace, runtime.monitor_name.as_str(), || {
                 format!("Left run(...) of the action.")
             });
