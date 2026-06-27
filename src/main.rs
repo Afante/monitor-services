@@ -1,3 +1,5 @@
+use env_logger;
+
 mod prog_settings;
 use prog_settings::*;
 
@@ -11,6 +13,8 @@ use monitor::*;
 
 #[tokio::main]
 async fn main() {
+    env_logger::init();
+    
     let exec = async || -> Result<(), String> {
         let cmd_args = CmdArgs::parse()?;
         let mut prog_settings = load_settings_from_dir(&cmd_args.cfg_dir)?;
