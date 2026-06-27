@@ -160,10 +160,12 @@ impl MonitorAction {
             Duration::from_secs(target.timeout.unwrap_or(common_settings.timeout)),
             spawn_blocking(move || client.execute(request))
         ).await;
+        log_line_f(LogLevel::Debug, monitor_name, || format!("Checking timeout."));
         let join_result = match timeout_result {
             Ok(rr) => rr,
             Err(err) => return Err(format!("Timed out: {}", err.to_string()))
         };
+        log_line_f(LogLevel::Debug, monitor_name, || format!("Checking join."));
         let res_result = match join_result {
             Ok(r) => r.await,
             Err(e) => return Err(format!("Join failed: {}", e.to_string()))
