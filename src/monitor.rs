@@ -138,6 +138,7 @@ impl MonitorAction {
             Err(err) => return Err(err.to_string())
         };
         let client = match reqwest::ClientBuilder::new()
+            .connection_verbose(true)
             .connect_timeout(Duration::from_secs(target.connect_timeout.unwrap_or(common_settings.connect_timeout)))
             .timeout(Duration::from_secs(target.timeout.unwrap_or(common_settings.timeout)))
             .read_timeout(Duration::from_secs(target.read_timeout.unwrap_or(common_settings.read_timeout)))
