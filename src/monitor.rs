@@ -155,7 +155,14 @@ impl MonitorAction {
             Err(err) => return Err(err.to_string())
         };
         log_line_f(LogLevel::Debug, monitor_name, || format!("Built the request"));
-        let res_result = client.execute(request).await;
+        let timeout_result = tokio::time::timeout(
+            Duration::from_secs(target.timeout.unwrap_or(common_settings.timeout)),
+            client.execute(request)
+        ).await;
+        let res_result = match timeout_result {
+            Ok(rr) => rr,
+            Err(err) => return Err(format!("Timed out: {}", err.to_string()))
+        };
         log_line_f(LogLevel::Debug, monitor_name, || format!("Sent the request"));
         match res_result {
             Ok(response) => {
