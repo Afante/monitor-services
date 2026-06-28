@@ -12,13 +12,13 @@ use std::string::ToString;
 use std::convert::AsRef;
 use std::str::FromStr;
 use core::time::Duration;
-use tokio::task::spawn_blocking;
+use std::thread;
 
 use crate::prog_settings::*;
 use crate::log::*;
 use crate::report_by_email::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum MonitorAction {
     Web,
     CustomCommand,
@@ -54,10 +54,24 @@ impl MonitorAction {
     }
 
     async fn run(&self, monitor_name: &str, target: &MonitorTarget, common_settings: &CommonSettings) -> Result<Option<String>, String> {
-        match *self {
-            MonitorAction::Web => self.do_web(monitor_name, target, common_settings).await,
-            MonitorAction::CustomCommand => self.do_custom_command(monitor_name, target, common_settings).await,
-            MonitorAction::Sleep(milliseconds) => self.do_sleep(monitor_name, milliseconds, common_settings).await
+        let this = self.clone();
+        let monitor_name = monitor_name.to_string();
+        let target = target.clone();
+        let common_settings = common_settings.clone();
+        let join_handle = thread::spawn(move || {
+            let rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(async {
+                match this {
+                    MonitorAction::Web => this.do_web(monitor_name.as_str(), &target, &common_settings).await,
+                    MonitorAction::CustomCommand => this.do_custom_command(monitor_name.as_str(), &target, &common_settings).await,
+                    MonitorAction::Sleep(milliseconds) => this.do_sleep(monitor_name.as_str(), milliseconds, &common_settings).await
+                }
+            })
+        });
+        let join_result = join_handle.join();
+        match join_result {
+            Ok(r) => r,
+            Err(e) => return Err(format!("{:?}", e))
         }
     }
 
@@ -156,20 +170,7 @@ impl MonitorAction {
             Err(err) => return Err(err.to_string())
         };
         log_line_f(LogLevel::Debug, monitor_name, || format!("Built the request"));
-        let timeout_result = tokio::time::timeout(
-            Duration::from_secs(target.timeout.unwrap_or(common_settings.timeout)),
-            spawn_blocking(move || client.execute(request))
-        ).await;
-        log_line_f(LogLevel::Debug, monitor_name, || format!("Checking timeout."));
-        let join_result = match timeout_result {
-            Ok(rr) => rr,
-            Err(err) => return Err(format!("Timed out: {}", err.to_string()))
-        };
-        log_line_f(LogLevel::Debug, monitor_name, || format!("Checking join."));
-        let res_result = match join_result {
-            Ok(r) => r.await,
-            Err(e) => return Err(format!("Join failed: {}", e.to_string()))
-        };
+        let res_result = client.execute(request).await;
         log_line_f(LogLevel::Debug, monitor_name, || format!("Sent the request"));
         match res_result {
             Ok(response) => {

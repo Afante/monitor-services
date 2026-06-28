@@ -139,7 +139,7 @@ pub struct MonitorTarget {
     pub read_timeout: Option<u64>,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct CommonSettings {
     #[garde(email)]
